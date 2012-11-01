@@ -39,7 +39,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	sendnum := 5000
+	sendnum := 2000
 	t := time.Now()
 	fmt.Println("sending messages.")
 	for i:=0;i<sendnum;i++{
