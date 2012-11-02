@@ -6,6 +6,7 @@ import(
 	gt "github.com/opesun/gotrigga"
 	"testing"
 	"time"
+	"encoding/json"
 )
 
 type Waiter struct {
@@ -126,3 +127,48 @@ func TestMultiroom(t *testing.T) {
 	}
 }
 
+func TestJson(t *testing.T) {
+	roomACounter := 0
+	m := map[string]interface{}{
+		"key": "value",
+		"key1": "value1",
+	}
+	da, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := func(rec *gt.Room, c *int) {
+		for {
+			dat, err := rec.Read()
+			if err != nil {
+				t.Fatal(err)
+				return
+			}
+			var v interface{}
+			err = json.Unmarshal(dat, &v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ma := v.(map[string]interface{})
+			if len(ma) != 2 || ma["key"] != "value" || ma["key1"] != "value1" {
+				t.Fatal(ma)
+			}
+			*c++
+		}
+	}
+	conn, err := gt.Connect("127.0.0.1:8912")
+	if err != nil {
+		t.Fatal(err)
+	}
+	roomA := conn.Room("roomA")
+	roomA.Subscribe()
+	go read(roomA, &roomACounter)
+	conn.Room("roomA").Publish(string(da))
+	v := &Waiter{}
+	ok := v.Interval(50*time.Millisecond).Limit(2*time.Second).Wait(func() bool {
+		return roomACounter == 1
+	})
+	if !ok {
+		t.Fatal(roomACounter)
+	}
+}
